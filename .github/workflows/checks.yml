@@ -20,6 +20,8 @@ jobs:
         with:
           fetch-depth: 10
           fetch-tags: true
+      - name: Validate Tag YAML file
+        run: yamllint tag.yml
       - name: Tag
         uses: martoc/action-tag@v0
       - name: Release on GitHub
