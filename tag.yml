@@ -1,0 +1,40 @@
+steps:
+  - script: |
+      TAG_SHA=$(git rev-parse HEAD)
+      if [ "$(Build.Reason)" == "PullRequest" ]; then
+        echo "Skipping tag creation for pull requests."
+        TAG_VERSION=${TAG_SHA:0:7}
+        TAG_NAME="$TAG_VERSION"
+      else
+        OUTPUT=$(docker run -w /workdir -v $PWD:/workdir martoc/semver:1.5.1 calculate --path /workdir --add-floating-tags)
+        TAG_VERSION=$(echo $OUTPUT | jq -r '.next_version')
+        TAG_FLOATING_VERSION_MAJOR=$(echo $OUTPUT | jq -r '.floating_version_major')
+        TAG_FLOATING_VERSION_MINOR=$(echo $OUTPUT | jq -r '.floating_version_minor')
+
+        TAG_NAME="v$TAG_VERSION"
+        TAG_FLOATING_MAJOR_NAME="v$TAG_FLOATING_VERSION_MAJOR"
+        TAG_FLOATING_MINOR_NAME="v$TAG_FLOATING_VERSION_MINOR"
+
+        git config user.name "Build Service"
+        git config user.email build-service@dev.azure.com
+        git push --tags --force
+      fi
+
+      echo "TAG_VERSION=$TAG_VERSION"
+      echo "TAG_FLOATING_VERSION_MAJOR=$TAG_FLOATING_VERSION_MAJOR"
+      echo "TAG_FLOATING_VERSION_MINOR=$TAG_FLOATING_VERSION_MINOR"
+      echo "TAG_NAME=$TAG_NAME"
+      echo "TAG_FLOATING_MAJOR_NAME=$TAG_FLOATING_MAJOR_NAME"
+      echo "TAG_FLOATING_MINOR_NAME=$TAG_FLOATING_MINOR_NAME"
+      echo "TAG_SHA=$TAG_SHA"
+
+      echo "##vso[task.setvariable variable=TAG_VERSION]$TAG_VERSION"
+      echo "##vso[task.setvariable variable=TAG_FLOATING_VERSION_MAJOR]$TAG_FLOATING_VERSION_MAJOR"
+      echo "##vso[task.setvariable variable=TAG_FLOATING_VERSION_MINOR]$TAG_FLOATING_VERSION_MINOR"
+      echo "##vso[task.setvariable variable=TAG_NAME]$TAG_NAME"
+      echo "##vso[task.setvariable variable=TAG_FLOATING_MAJOR_NAME]$TAG_FLOATING_MAJOR_NAME"
+      echo "##vso[task.setvariable variable=TAG_FLOATING_MINOR_NAME]$TAG_FLOATING_MINOR_NAME"
+      echo "##vso[task.setvariable variable=TAG_SHA]$TAG_SHA"
+    displayName: "Tag"
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
